@@ -841,7 +841,11 @@ async function runUserEnvProbe(userEnvProbe: UserEnvProbe, params: { allowSystem
 		}
 
 		const traceOutput = makeLog(params.output, LogLevel.Trace);
-		const resultP = runRemoteCommandNoPty({ output: traceOutput }, { remoteExec: containerProperties.remoteExec }, [systemShellUnix, ...shellArgs, command], containerProperties.installFolder);
+		const resultP = runRemoteCommandNoPty({ output: traceOutput }, { remoteExec: containerProperties.remoteExec }, [systemShellUnix, ...shellArgs, command], containerProperties.installFolder, {
+			print: 'end',
+			silent: false,
+		});
+		params.output.write(`userEnvProbe command: ${JSON.stringify([systemShellUnix, ...shellArgs, command])}`);
 		Promise.race([resultP, delay(2000)])
 			.then(async result => {
 				if (!result) {
@@ -872,6 +876,8 @@ ${processTreeToString(tree)}`);
 			return {};
 		}
 		const raw = result.stdout.toString();
+		params.output.write(`userEnvProbe stdout: ${raw}`);
+		params.output.write(`userEnvProbe stderr: ${result.stderr.toString()}`);
 		const match = regex.exec(raw);
 		const rawStripped = match ? match[1] : '';
 		if (!rawStripped) {
@@ -902,7 +908,7 @@ Merged:    ${typeof env.PATH === 'string' ? `'${env.PATH}'` : 'None'}` : ''}`);
 
 		return env;
 	} catch (err) {
-		params.output.write(toErrorText(err && (err.stack || err.message) || 'Error reading shell environment.'));
+		params.output.write('TEST: ' + toErrorText(err && (err.stack || err.message) || 'Error reading shell environment.'));
 		return {};
 	}
 }
